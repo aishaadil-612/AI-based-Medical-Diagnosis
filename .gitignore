@@ -1,0 +1,22 @@
+# Python environment & cache
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Datasets (large media files)
+archive (5)/
+processed_dataset/
+
+# Trained models (exceeds standard Git file limit)
+*.keras
+*.h5
+
+# Grad-CAM generated triplet images
+gradcam_outputs/
+
+# OS specific files
+.DS_Store
+Thumbs.db

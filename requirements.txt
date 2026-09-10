@@ -1,0 +1,8 @@
+# AI Pneumonia Detection System — Dependencies
+tensorflow==2.21.0
+numpy==2.4.6
+opencv-python==5.0.0.93
+pillow==12.3.0
+matplotlib==3.11.1
+scikit-learn==1.9.0
+streamlit==1.63.0

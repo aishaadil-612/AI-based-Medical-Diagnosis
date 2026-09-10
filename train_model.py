@@ -24,7 +24,14 @@ from sklearn.utils.class_weight import compute_class_weight
 # ==========================================
 # 1. PATHS
 # ==========================================
-PROJECT_ROOT = r"C:\Users\NIDS\OneDrive\Desktop\xai"
+POSSIBLE_ROOTS = [
+    r"D:\Aisha\XAI-Pneumonia\AI-based-Medical-Diagnosis",
+    r"C:\Users\NIDS\OneDrive\Desktop\xai",
+    os.path.dirname(os.path.abspath(__file__)),
+]
+PROJECT_ROOT = next((p for p in POSSIBLE_ROOTS if os.path.exists(p)), POSSIBLE_ROOTS[0])
+print(f"Using PROJECT_ROOT: {PROJECT_ROOT}")
+
 DATASET_ROOT = os.path.join(PROJECT_ROOT, "processed_dataset")
 TRAIN_DIR = os.path.join(DATASET_ROOT, "train")
 VAL_DIR = os.path.join(DATASET_ROOT, "validation")
