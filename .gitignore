@@ -20,3 +20,10 @@ gradcam_outputs/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
