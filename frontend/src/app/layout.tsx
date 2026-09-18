@@ -1,33 +1,52 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import AuroraBackground from "@/components/AuroraBackground";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Pneumora — AI-Powered Chest X-Ray Pneumonia Screening",
+  title: "Pneumora — AI-Powered Chest Radiograph Pneumonia Screening & XAI",
   description:
-    "Explainable AI pneumonia detection system powered by EfficientNetB0 with Grad-CAM saliency mapping. Upload chest X-rays for instant AI screening with full clinical reasoning.",
+    "Explainable AI pneumonia detection system powered by EfficientNetB0 with Grad-CAM saliency mapping. Clinical-grade 3D thoracic twin and interpretability audit.",
+  icons: {
+    icon: "/pneumora-icon.png",
+    shortcut: "/pneumora-icon.png",
+    apple: "/pneumora-icon.png",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#010057] text-[#f5f7ff]">
-        {children}
+      <body
+        className="min-h-full flex flex-col bg-[#070b14] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300 relative"
+        suppressHydrationWarning
+      >
+        <AuroraBackground />
+        <div className="relative z-10 flex flex-col flex-1 min-h-full">
+          {children}
+        </div>
       </body>
     </html>
   );

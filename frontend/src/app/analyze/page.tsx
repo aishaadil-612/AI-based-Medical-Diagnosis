@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,32 +9,38 @@ import {
   ShieldAlert,
   ShieldCheck,
   Gauge,
-  MessageSquareWarning,
-  Cpu,
-  Brain,
   Eye,
   Layers,
   BarChart3,
   Stethoscope,
-  HeartPulse,
-  Wind,
-  Pill,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  ImageIcon,
+  Activity,
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Info,
+  Sparkles,
+  ArrowRight,
+  Scan,
+  Flame,
+  ChevronRight,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 
 const LungVisualization3D = dynamic(
   () => import("@/components/LungVisualization3D"),
-  { ssr: false, loading: () => <div className="w-full h-[350px] flex items-center justify-center text-[var(--text-muted)]">Loading 3D Model...</div> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[420px] rounded-3xl bg-slate-900/60 border border-white/[0.08] flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+        <span className="text-xs font-semibold text-slate-300">Loading 3D Anatomy Model...</span>
+      </div>
+    ),
+  }
 );
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -60,20 +67,21 @@ interface PredictionResult {
 }
 
 const samples = [
-  { key: "normal_1", name: "Sample 1: Normal Chest X-Ray", label: "NORMAL" },
-  { key: "normal_2", name: "Sample 2: Normal Chest X-Ray", label: "NORMAL" },
-  { key: "pneumonia_bacterial", name: "Sample 3: Bacterial Pneumonia", label: "PNEUMONIA" },
-  { key: "pneumonia_viral", name: "Sample 4: Viral Pneumonia", label: "PNEUMONIA" },
-  { key: "challenging_fn", name: "Sample 5: Challenging Case (FN)", label: "PNEUMONIA" },
+  { key: "normal_1", name: "Sample 1: Normal Chest Radiograph", label: "NORMAL", desc: "Clear bilateral lung parenchyma without infiltrates" },
+  { key: "normal_2", name: "Sample 2: Normal Chest Radiograph", label: "NORMAL", desc: "Physiological radiolucency with clear costophrenic angles" },
+  { key: "pneumonia_bacterial", name: "Sample 3: Bacterial Pneumonia", label: "PNEUMONIA", desc: "Dense focal lobar consolidation and bronchovascular markings" },
+  { key: "pneumonia_viral", name: "Sample 4: Viral Pneumonia", label: "PNEUMONIA", desc: "Bilateral interstitial reticular / perihilar opacity pattern" },
+  { key: "challenging_fn", name: "Sample 5: Challenging Borderline Case", label: "PNEUMONIA", desc: "Subtle basilar opacity near threshold boundary" },
 ];
+
 
 export default function AnalyzePage() {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedReasoning, setExpandedReasoning] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [activeImageView, setActiveImageView] = useState<"triplet" | "overlay">("triplet");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePredict = useCallback(async (file: File) => {
@@ -152,599 +160,579 @@ export default function AnalyzePage() {
   const isPneumonia = result?.pred_label === "PNEUMONIA";
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[#070b14]">
       <Navbar />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 ml-16 overflow-y-auto">
-          <div className="px-6 py-6 max-w-[1400px] mx-auto">
-            {/* Top disclaimer */}
-            <DisclaimerBanner />
 
-            {/* Welcome / Upload area */}
-            {!result && !loading && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 mb-8"
+      <div className="flex flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-8 py-6">
+        {/* Main Content Area */}
+        <main className="w-full space-y-6">
+          <DisclaimerBanner />
+
+          {/* =================================================================
+              DRIBBLE-STYLE GREETING HEADER: "Hey, Clinician"
+              ================================================================= */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+            <div className="space-y-1">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Hey, Clinician
+              </h1>
+              <p className="text-sm text-slate-400 font-medium">
+                Lets Monitor Your Lung System Analysis
+              </p>
+            </div>
+
+            {result && (
+              <button
+                onClick={handleReset}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-white/[0.08] text-xs font-semibold shadow-md transition-all hover:scale-105 self-start sm:self-auto"
               >
-                <h1 className="text-2xl font-bold mb-2">
-                  Welcome to <span className="gradient-text">Pneumora</span>
-                </h1>
-                <p className="text-[var(--text-secondary)] text-sm mb-8">
-                  Upload a chest X-ray or choose a benchmark sample to run AI
-                  screening with full Grad-CAM explainability.
-                </p>
+                <RotateCcw size={13} />
+                <span>New Radiograph Scan</span>
+              </button>
+            )}
+          </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Upload zone */}
-                  <div
-                    className={`upload-zone ${dragOver ? "dragover" : ""}`}
-                    onDrop={handleDrop}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(true);
-                    }}
-                    onDragLeave={() => setDragOver(false)}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload
-                      size={40}
-                      className="mx-auto mb-4 text-[var(--text-muted)]"
-                    />
-                    <p className="text-sm font-medium mb-1">
-                      Drop a chest X-ray here, or click to browse
-                    </p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Supports PNG, JPG, JPEG — frontal chest radiograph (AP or
-                      PA view)
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
+          {/* =================================================================
+              INTAKE SCREEN (when no scan loaded)
+              ================================================================= */}
+          {!result && !loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Drag & Drop Upload Zone */}
+                <div
+                  className={`lg:col-span-6 clinora-card p-10 flex flex-col items-center justify-center min-h-[340px] cursor-pointer hover:border-cyan-500/30 transition-all ${
+                    dragOver ? "border-cyan-400 bg-cyan-500/10 shadow-[0_0_40px_rgba(6,182,212,0.2)]" : ""
+                  }`}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-teal-400/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10">
+                    <Upload size={28} />
                   </div>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    Upload Patient Radiograph
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-5 text-center max-w-sm leading-relaxed">
+                    Drag and drop DICOM export or chest X-ray image (AP/PA View) to execute real-time Grad-CAM explainability
+                  </p>
+                  <span className="px-4 py-1.5 rounded-full bg-slate-900 border border-white/[0.08] text-xs font-mono text-slate-300">
+                    PNG, JPG, JPEG &bull; Standard Frontal Thoracic
+                  </span>
 
-                  {/* Sample selector */}
-                  <div className="glass-card p-6">
-                    <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                      <ImageIcon size={16} className="text-[var(--cyan)]" />
-                      Benchmark Test Samples
-                    </h3>
-                    <div className="space-y-2">
-                      {samples.map((s) => (
-                        <button
-                          key={s.key}
-                          onClick={() => handleSamplePredict(s.key)}
-                          className="w-full flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-[var(--cyan)]/20 transition-all text-left text-sm"
-                        >
-                          <span>{s.name}</span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              s.label === "NORMAL"
-                                ? "bg-[var(--green-clinical)]/15 text-[var(--green-clinical)]"
-                                : "bg-[var(--amber-red)]/15 text-[var(--amber-red)]"
-                            }`}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Benchmark Test Cases */}
+                <div className="lg:col-span-6 clinora-card p-7 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Sparkles size={16} className="text-cyan-400" />
+                        Benchmark Hold-Out Cases
+                      </h3>
+                      <span className="text-[11px] text-slate-500">
+                        880 Held-Out Partitions
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {samples.map((s) => {
+                        const isNorm = s.label === "NORMAL";
+                        return (
+                          <button
+                            key={s.key}
+                            onClick={() => handleSamplePredict(s.key)}
+                            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 hover:bg-slate-800/90 border border-white/[0.06] hover:border-cyan-500/30 transition-all text-left group"
                           >
-                            {s.label}
-                          </span>
-                        </button>
-                      ))}
+                            <div className="space-y-0.5">
+                              <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors block">
+                                {s.name}
+                              </span>
+                              <span className="text-[11px] text-slate-400 block">
+                                {s.desc}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-extrabold px-3 py-1 rounded-full border tracking-wider uppercase whitespace-nowrap ml-3 ${
+                                isNorm
+                                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                  : "bg-rose-500/15 text-rose-300 border-rose-500/30"
+                              }`}
+                            >
+                              {s.label}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
 
-            {/* Loading state */}
-            {loading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-20"
-              >
-                <Loader2
-                  size={48}
-                  className="text-[var(--cyan)] animate-spin mb-4"
-                />
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Analyzing radiograph and generating Grad-CAM heatmaps...
+                  <p className="text-[11px] text-slate-400 mt-4 pt-3 border-t border-white/[0.06] flex items-center gap-2">
+                    <Info size={14} className="text-cyan-400 shrink-0" />
+                    <span>Select any benchmark case to load calibrated diagnostic findings instantly.</span>
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* =================================================================
+              LOADING STATE
+              ================================================================= */}
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-28 space-y-4"
+            >
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-2 border-slate-800 border-t-cyan-400 animate-spin" />
+                <Scan className="w-6 h-6 text-cyan-400 absolute inset-0 m-auto animate-pulse" />
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-base font-bold text-white">
+                  Executing EfficientNetB0 Inference
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Synthesizing Grad-CAM spatial gradients on top_conv layer
                 </p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
+                <p className="text-xs font-mono text-cyan-400 pt-1">
                   {fileName}
                 </p>
-              </motion.div>
-            )}
+              </div>
+            </motion.div>
+          )}
 
-            {/* Error state */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="glass-card p-6 my-6 border-[var(--red-clinical)]/30"
-              >
-                <div className="flex items-center gap-3 text-[var(--red-clinical)]">
-                  <XCircle size={20} />
-                  <p className="text-sm">{error}</p>
+          {/* =================================================================
+              ERROR STATE
+              ================================================================= */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="clinora-card p-6 border-rose-500/40 bg-rose-950/20"
+            >
+              <div className="flex items-center gap-3 text-rose-400">
+                <XCircle size={24} className="shrink-0" />
+                <div>
+                  <h4 className="text-sm font-bold text-rose-300">Inference Interrupted</h4>
+                  <p className="text-xs text-slate-300 mt-0.5">{error}</p>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="mt-4 text-xs text-[var(--cyan)] hover:underline"
-                >
-                  Try again
-                </button>
-              </motion.div>
-            )}
+              </div>
+              <button
+                onClick={handleReset}
+                className="mt-4 px-4 py-2 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold hover:bg-rose-500/30 transition-colors"
+              >
+                Reset / Try Again
+              </button>
+            </motion.div>
+          )}
 
-            {/* ============================================
-                RESULTS DASHBOARD
-                ============================================ */}
-            <AnimatePresence>
-              {result && !loading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-6"
-                >
-                  {/* Reset button */}
-                  <div className="flex items-center justify-between mb-6">
+          {/* =================================================================
+              DIAGNOSTIC DASHBOARD (DRIBBLE CLINORA STYLE)
+              ================================================================= */}
+          <AnimatePresence>
+            {result && !loading && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-6"
+              >
+                {/* Status Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/60 border border-white/[0.06] backdrop-blur-xl">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        isPneumonia
+                          ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                          : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      }`}
+                    >
+                      {isPneumonia ? <ShieldAlert size={22} /> : <ShieldCheck size={22} />}
+                    </div>
                     <div>
-                      <h2 className="text-xl font-bold">Diagnostic Results</h2>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {fileName}
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base font-extrabold text-white">
+                          {isPneumonia ? "Warning: Pneumonia Indicated" : "Normal Radiograph (Clear)"}
+                        </h2>
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                            isPneumonia
+                              ? "bg-rose-500/25 text-rose-300 border border-rose-500/40"
+                              : "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40"
+                          }`}
+                        >
+                          {result.pred_label}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        Examined Case: <strong className="text-slate-200">{fileName}</strong>
+                        {result.ground_truth && (
+                          <span className="ml-2 text-slate-500">
+                            &bull; Reference Ground Truth: <strong className="text-cyan-400">{result.ground_truth}</strong>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* =============================================================
+                    STAGE 1 (TOP): HIGHLIGHTED EXPLAINABLE AI (XAI) ENGINE
+                    ============================================================= */}
+                <div className="xai-hero-card p-6 sm:p-7 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-black uppercase tracking-wider shadow-sm shadow-cyan-500/20 animate-pulse">
+                          <Flame size={13} className="text-cyan-400" />
+                          ★ Key Explainability Engine (XAI)
+                        </span>
+                        <span className="text-xs font-mono text-slate-400">
+                          Layer: <strong className="text-cyan-300">top_conv (7×7×1280)</strong>
+                        </span>
+                      </div>
+
+                      <h2 className="text-2xl font-bold text-white tracking-tight pt-1">
+                        Gradient-Weighted Class Activation Maps (Grad-CAM)
+                      </h2>
+                      <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
+                        Visualizing the exact pixel regions that compelled the deep learning model to make this diagnostic decision. Warmer spectrum intensities (red, yellow) identify pulmonary alveolar opacification and consolidations.
                       </p>
                     </div>
-                    <button
-                      onClick={handleReset}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-sm transition-all"
-                    >
-                      <RotateCcw size={14} />
-                      New Scan
-                    </button>
+
+                    <div className="flex items-center bg-slate-950/90 p-1 rounded-full border border-white/[0.08] text-xs shrink-0 self-start sm:self-center">
+                      <button
+                        onClick={() => setActiveImageView("triplet")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all font-semibold ${
+                          activeImageView === "triplet"
+                            ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 shadow-md shadow-cyan-500/20"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <Layers size={13} />
+                        <span>Tri-View Comparison</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveImageView("overlay")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all font-semibold ${
+                          activeImageView === "overlay"
+                            ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 shadow-md shadow-cyan-500/20"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <Eye size={13} />
+                        <span>Fused Overlay</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Main dashboard grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                    {/* ====== CENTER COLUMN (3D Lung + Badges + GradCAM) ====== */}
-                    <div className="lg:col-span-7 space-y-5">
-                      {/* 3D Lung with floating badges */}
-                      <div className="glass-card-static p-4 relative overflow-hidden">
-                        <div className="h-[350px]">
-                          <LungVisualization3D
-                            predLabel={result.pred_label}
-                            hemithorax={result.hemithorax}
-                            zone={result.zone}
-                            isIdle={false}
+                  {/* Tri-View Images (Clinora Modern Rounded Style) */}
+                  {activeImageView === "triplet" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {/* 1. Original Radiograph */}
+                      <div className="clinora-card p-4 space-y-3 bg-slate-950/70 border border-white/[0.08] group hover:border-cyan-500/40 transition-all">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-200 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            Original Radiograph
+                          </span>
+                          <span className="font-mono text-[11px] text-slate-500">224×224 RGB</span>
+                        </div>
+                        <div className="rounded-2xl overflow-hidden aspect-square bg-black/60 flex items-center justify-center border border-white/[0.06]">
+                          <img
+                            src={`data:image/png;base64,${result.images.original}`}
+                            alt="Original Radiograph"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
-
-                        {/* Floating Result Badge */}
-                        <motion.div
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className={`absolute top-4 left-4 animate-float px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold ${
-                            isPneumonia
-                              ? "bg-[var(--red-clinical)]/20 border border-[var(--red-clinical)]/40 text-[var(--red-clinical)] glow-red"
-                              : "bg-[var(--green-clinical)]/20 border border-[var(--green-clinical)]/40 text-[var(--green-clinical)] glow-green"
-                          }`}
-                        >
-                          {isPneumonia ? (
-                            <ShieldAlert size={18} />
-                          ) : (
-                            <ShieldCheck size={18} />
-                          )}
-                          {isPneumonia
-                            ? "PNEUMONIA DETECTED"
-                            : "NORMAL X-RAY"}
-                        </motion.div>
-
-                        {/* Floating Confidence Chip */}
-                        <motion.div
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: 0.15 }}
-                          className="absolute top-4 right-4 animate-float px-4 py-2 rounded-full bg-white/[0.08] border border-white/[0.12] backdrop-blur-lg text-sm font-mono glow-cyan"
-                          style={{ animationDelay: "0.5s" }}
-                        >
-                          {result.confidence.toFixed(1)}% Confidence
-                        </motion.div>
-
-                        {/* Ground truth tag if available */}
-                        {result.ground_truth && (
-                          <div className="absolute bottom-4 left-4 px-3 py-1 rounded-lg bg-white/[0.06] border border-white/[0.1] text-xs text-[var(--text-muted)]">
-                            Ground Truth:{" "}
-                            <span className="font-medium text-[var(--text-primary)]">
-                              {result.ground_truth}
-                            </span>
-                          </div>
-                        )}
+                        <p className="text-[11px] text-slate-400 text-center font-medium">
+                          Standardized frontal thoracic view
+                        </p>
                       </div>
 
-                      {/* Grad-CAM Activation Strip */}
-                      <div className="glass-card-static p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold flex items-center gap-2">
-                            <Eye size={16} className="text-[var(--cyan)]" />
-                            Grad-CAM Activation Intensity
-                          </h3>
-                          <span className="text-xs text-[var(--text-muted)]">
-                            Salient area: {result.salient_pct.toFixed(1)}% of
-                            thoracic field
+                      {/* 2. Grad-CAM Thermal Heatmap */}
+                      <div className="clinora-card p-4 space-y-3 bg-slate-950/70 border border-cyan-500/40 hover:border-cyan-400 transition-all shadow-[0_0_25px_rgba(6,182,212,0.1)] group">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-cyan-300 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                            Grad-CAM Thermal Heatmap
+                          </span>
+                          <span className="font-mono text-[11px] text-cyan-400 font-bold">COLORMAP_JET</span>
+                        </div>
+                        <div className="rounded-2xl overflow-hidden aspect-square bg-black/60 flex items-center justify-center border border-cyan-500/30">
+                          <img
+                            src={`data:image/png;base64,${result.images.heatmap}`}
+                            alt="Grad-CAM Thermal Heatmap"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-400 text-center font-medium">
+                          Gradients backpropagated to top_conv
+                        </p>
+                      </div>
+
+                      {/* 3. Superimposed Overlay */}
+                      <div className="clinora-card p-4 space-y-3 bg-slate-950/70 border border-white/[0.08] group hover:border-cyan-500/40 transition-all">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-emerald-300 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                            Superimposed Overlay
+                          </span>
+                          <span className="font-mono text-[11px] text-emerald-400 font-bold">α = 0.40 Blend</span>
+                        </div>
+                        <div className="rounded-2xl overflow-hidden aspect-square bg-black/60 flex items-center justify-center border border-white/[0.06]">
+                          <img
+                            src={`data:image/png;base64,${result.images.overlay}`}
+                            alt="Superimposed Overlay"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-400 text-center font-medium">
+                          Radiological anatomical fusion
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl overflow-hidden border border-cyan-500/30 bg-black/60 max-w-lg mx-auto p-3">
+                      <img
+                        src={`data:image/png;base64,${result.images.overlay}`}
+                        alt="Superimposed Overlay"
+                        className="w-full aspect-square object-cover rounded-xl"
+                      />
+                    </div>
+                  )}
+
+                  {/* Activation Intensity Bar (with Clinora scale ticks) */}
+                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-white/[0.06] space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <span className="font-bold text-slate-200 flex items-center gap-2">
+                        <Activity size={15} className="text-cyan-400" />
+                        Grad-CAM Salient Activation Coverage:
+                        <strong className="text-cyan-400 font-mono text-sm">{result.salient_pct.toFixed(1)}%</strong>
+                        <span className="text-slate-400 font-normal">of thoracic field</span>
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        Peak Saliency Pixel: [Y={result.y_peak}, X={result.x_peak}]
+                      </span>
+                    </div>
+
+                    <div className="h-3 rounded-full bg-slate-900 overflow-hidden border border-white/[0.06]">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(result.salient_pct * 4, 100)}%` }}
+                        transition={{ duration: 0.9, ease: "easeOut" }}
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-rose-500"
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono pt-1">
+                      <span>0% (Aerated Baseline)</span>
+                      <span className="text-slate-400 font-bold">Decision Boundary: τ = 0.50</span>
+                      <span>100% (Dense Infiltrate)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* =============================================================
+                    STAGE 2 (BELOW): CLINORA 3-COLUMN DIAGNOSTIC GRID
+                    Left: 3D Thoracic Twin
+                    Middle: Lung Function / Efficiency & "Why the Risk?"
+                    Right: Medication & Therapy (Clinical Protocol)
+                    ============================================================= */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* Left 5 Cols: 3D Thoracic Twin (Matching Dribbble Hero) */}
+                  <div className="lg:col-span-5 h-[500px]">
+                    <LungVisualization3D
+                      predLabel={result.pred_label}
+                      hemithorax={result.hemithorax}
+                      zone={result.zone}
+                      salientPct={result.salient_pct}
+                      isIdle={false}
+                    />
+                  </div>
+
+                  {/* Middle 4 Cols: "Lung Function Efficiency" & "Why the Risk?" */}
+                  <div className="lg:col-span-4 space-y-5">
+                    
+                    {/* Card 1: Diagnostic Efficiency / Risk Level */}
+                    <div className="clinora-card p-6 space-y-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-300">
+                          Diagnostic Confidence
+                        </span>
+                        <ArrowRight size={14} className="text-slate-400 -rotate-45" />
+                      </div>
+
+                      <div>
+                        <div className="text-3xl font-extrabold text-white font-mono flex items-baseline gap-2">
+                          {result.confidence.toFixed(0)}%
+                          <span className="text-xs font-semibold text-slate-400 font-sans">
+                            {isPneumonia ? "High Risk (Infiltrate)" : "Optimal (Aerated)"}
                           </span>
                         </div>
-                        <div className="h-3 rounded-full bg-white/[0.05] overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${Math.min(result.salient_pct * 5, 100)}%`,
-                            }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            className="h-full rounded-full"
-                            style={{
-                              background:
-                                "linear-gradient(90deg, #22c55e, #f59e0b, #ef4444)",
-                            }}
-                          />
-                        </div>
                       </div>
 
-                      {/* Grad-CAM Triplet Viewer */}
-                      <div className="glass-card-static p-4">
-                        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                          <Layers size={16} className="text-[var(--cyan)]" />
-                          Explainable AI — Grad-CAM Visualizations
-                        </h3>
-                        <p className="text-xs text-[var(--text-muted)] mb-4">
-                          The heatmap visualizes image regions that contributed
-                          to the model&apos;s prediction. Warmer colors (red, yellow)
-                          indicate anatomical features most influential in the
-                          decision.
-                        </p>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[
-                            {
-                              label: "Original X-Ray (224×224)",
-                              key: "original" as const,
-                            },
-                            {
-                              label: "Grad-CAM Heatmap (top_conv)",
-                              key: "heatmap" as const,
-                            },
-                            {
-                              label: "Superimposed Overlay",
-                              key: "overlay" as const,
-                            },
-                          ].map((img) => (
-                            <div key={img.key} className="text-center">
-                              <div className="rounded-lg overflow-hidden border border-white/[0.08] bg-black/20">
-                                <img
-                                  src={`data:image/png;base64,${result.images[img.key]}`}
-                                  alt={img.label}
-                                  className="w-full aspect-square object-cover"
-                                />
-                              </div>
-                              <p className="text-[10px] text-[var(--text-muted)] mt-2">
-                                {img.label}
-                              </p>
-                            </div>
-                          ))}
+                      {/* Clinora-style gradient progress capsule */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="h-3 rounded-full bg-slate-900 overflow-hidden border border-white/[0.08]">
+                          <div
+                            className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-emerald-400 via-cyan-400 to-rose-500"
+                            style={{ width: `${Math.min(result.confidence, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <span>00</span>
+                          <span>100</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* ====== RIGHT COLUMN (Confidence + Reasoning + Tech + Next Steps) ====== */}
-                    <div className="lg:col-span-5 space-y-5">
-                      {/* Diagnostic Confidence Card */}
-                      <div className="glass-card-static p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Gauge size={18} className="text-[var(--cyan)]" />
-                          <h3 className="text-sm font-semibold">
-                            Diagnostic Confidence
-                          </h3>
-                        </div>
-                        <div className="text-center mb-4">
-                          <p
-                            className={`text-5xl font-bold ${
-                              isPneumonia
-                                ? "text-[var(--amber-red)]"
-                                : "text-[var(--green-clinical)]"
-                            }`}
-                          >
-                            {result.confidence.toFixed(1)}%
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)] mt-1">
-                            Raw Probability: {(result.prob * 100).toFixed(2)}%
-                          </p>
-                        </div>
-                        {/* Gradient progress bar */}
-                        <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden mb-3">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${result.confidence}%`,
-                            }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            className="h-full rounded-full progress-gradient"
-                          />
-                        </div>
-                        {/* Triage reason */}
-                        <div
-                          className={`p-3 rounded-lg text-xs leading-relaxed ${
-                            result.triage_reason.includes("Borderline")
-                              ? "bg-[var(--amber-red)]/10 border border-[var(--amber-red)]/20 text-[var(--amber-red)]"
-                              : "bg-[var(--green-clinical)]/10 border border-[var(--green-clinical)]/20 text-[var(--green-clinical)]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            {result.triage_reason.includes("Borderline") ? (
-                              <AlertTriangle size={14} />
-                            ) : (
-                              <CheckCircle2 size={14} />
-                            )}
-                            <span className="font-semibold">
-                              {result.triage_reason.includes("Borderline")
-                                ? "Borderline Triage Warning"
-                                : "Diagnostic Concordance"}
+                    {/* Card 2: Clinora-style "Why the Risk?" */}
+                    <div className="clinora-card p-6 space-y-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-white text-sm">
+                          Why the Risk?
+                        </span>
+                        <span className="text-cyan-400 text-xs font-semibold">
+                          Evidence Audit
+                        </span>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {/* Item 1 */}
+                        <div className="space-y-1">
+                          <span className="text-xs text-slate-400 font-medium">
+                            {isPneumonia ? "Calculated Pneumonia Probability" : "Clear Parenchymal Density"}
+                          </span>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-bold font-mono text-white">
+                              {(result.prob * 100).toFixed(1)}%
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              Prob
                             </span>
                           </div>
-                          {result.triage_reason}
+                          <p className="text-[11px] text-slate-400 leading-snug">
+                            {result.diag_reason}
+                          </p>
                         </div>
-                      </div>
 
-                      {/* Why This Result? Card */}
-                      <div className="glass-card-static p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <MessageSquareWarning
-                            size={18}
-                            className="text-[var(--cyan)]"
-                          />
-                          <h3 className="text-sm font-semibold">
-                            Why This Result?
-                          </h3>
-                        </div>
-                        <div className="space-y-4">
-                          {/* Diagnostic Reason */}
-                          <div className="flex items-start gap-3">
-                            <div className="p-1.5 rounded-lg bg-[var(--cyan)]/10 mt-0.5">
-                              <Brain size={14} className="text-[var(--cyan)]" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold mb-1">
-                                Diagnostic Rationale
-                              </p>
-                              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                                {result.diag_reason}
-                              </p>
-                            </div>
+                        {/* Item 2 */}
+                        <div className="space-y-1 pt-2 border-t border-white/[0.06]">
+                          <span className="text-xs text-slate-400 font-medium">
+                            Anatomical Hotspot Peak
+                          </span>
+                          <div className="text-sm font-bold text-white">
+                            {result.hemithorax} &bull; {result.zone}
                           </div>
-                          {/* Saliency Reason */}
-                          <div className="flex items-start gap-3">
-                            <div className="p-1.5 rounded-lg bg-[var(--cyan)]/10 mt-0.5">
-                              <Eye size={14} className="text-[var(--cyan)]" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold mb-1">
-                                Anatomical Attention Mapping
-                              </p>
-                              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                                {result.saliency_reason}
-                              </p>
-                            </div>
-                          </div>
+                          <p className="text-[11px] text-slate-400 leading-snug">
+                            {result.saliency_reason}
+                          </p>
                         </div>
-                        {/* Expandable full report */}
-                        <button
-                          onClick={() =>
-                            setExpandedReasoning(!expandedReasoning)
-                          }
-                          className="flex items-center gap-1 mt-4 text-xs text-[var(--cyan)] hover:underline"
-                        >
-                          {expandedReasoning
-                            ? "Hide full report"
-                            : "See full report"}
-                          {expandedReasoning ? (
-                            <ChevronUp size={12} />
-                          ) : (
-                            <ChevronDown size={12} />
-                          )}
-                        </button>
-                        <AnimatePresence>
-                          {expandedReasoning && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden mt-3 pt-3 border-t border-white/[0.06]"
-                            >
-                              <div className="text-xs text-[var(--text-muted)] space-y-2">
-                                <p>
-                                  <strong>Decision Threshold:</strong> Fixed at
-                                  0.50. A predicted probability &ge; 0.50
-                                  triggers a PNEUMONIA classification.
-                                </p>
-                                <p>
-                                  <strong>Grad-CAM Feature Map:</strong>{" "}
-                                  Extracted from layer top_conv (final
-                                  convolutional stage of EfficientNetB0,
-                                  dimension 7 × 7 × 1280).
-                                </p>
-                                <p>
-                                  <strong>Hemithorax:</strong>{" "}
-                                  {result.hemithorax}
-                                </p>
-                                <p>
-                                  <strong>Zone:</strong> {result.zone}
-                                </p>
-                                <p>
-                                  <strong>Peak Activation:</strong> Y=
-                                  {result.y_peak}, X={result.x_peak}
-                                </p>
-                                <p>
-                                  <strong>False Negative Risk:</strong> In
-                                  clinical settings, a False Negative (Pneumonia
-                                  classified as Normal) carries significant risk
-                                  of delayed treatment. The model achieved
-                                  89.56% Sensitivity on the 880-image held-out
-                                  test set with ROC-AUC of 0.9873.
-                                </p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
 
-                      {/* Model & Technology Card */}
-                      <div className="glass-card-static p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Cpu size={18} className="text-[var(--cyan)]" />
-                          <h3 className="text-sm font-semibold">
-                            Model &amp; Technology
-                          </h3>
-                        </div>
-                        <div className="space-y-3">
-                          {[
-                            {
-                              icon: Brain,
-                              title: "EfficientNetB0 Backbone",
-                              sub: "4.05M parameters, ImageNet pre-trained",
-                            },
-                            {
-                              icon: Layers,
-                              title: "Two-Stage Fine-Tuning",
-                              sub: "Frozen base → Top 30 layers unfrozen",
-                            },
-                            {
-                              icon: Eye,
-                              title: "Grad-CAM Explainability",
-                              sub: "top_conv layer, 7×7×1280 feature maps",
-                            },
-                            {
-                              icon: BarChart3,
-                              title: "Class-Weighted Training",
-                              sub: "2.7:1 imbalance handled (weights: 1.85 / 0.69)",
-                            },
-                            {
-                              icon: CheckCircle2,
-                              title: "880-Image Held-Out Test",
-                              sub: "91.36% accuracy, 0.9873 AUC",
-                            },
-                          ].map((item) => {
-                            const Icon = item.icon;
-                            return (
-                              <div
-                                key={item.title}
-                                className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
-                              >
-                                <Icon
-                                  size={16}
-                                  className="text-[var(--cyan)] flex-shrink-0"
-                                />
-                                <div>
-                                  <p className="text-xs font-medium">
-                                    {item.title}
-                                  </p>
-                                  <p className="text-[10px] text-[var(--text-muted)]">
-                                    {item.sub}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <a
-                          href="/insights"
-                          className="block mt-4 text-center text-xs px-4 py-2 rounded-lg bg-[var(--cyan)]/10 text-[var(--cyan)] hover:bg-[var(--cyan)]/15 transition-colors"
-                        >
-                          View Full Model Report
-                        </a>
-                      </div>
-
-                      {/* Recommended Next Steps Card */}
-                      <div className="glass-card-static p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Stethoscope
-                            size={18}
-                            className="text-[var(--cyan)]"
-                          />
-                          <h3 className="text-sm font-semibold">
-                            Recommended Next Steps
-                          </h3>
-                        </div>
-                        <p className="text-[10px] text-[var(--text-muted)] mb-3">
-                          Static informational guidance — not tied to model
-                          output
-                        </p>
-                        <div className="space-y-2.5">
-                          {[
-                            {
-                              icon: Stethoscope,
-                              name: "Pulmonologist",
-                              desc: "Primary specialist for respiratory conditions",
-                              tag: "Primary",
-                            },
-                            {
-                              icon: Eye,
-                              name: "Thoracic Radiologist",
-                              desc: "Expert chest imaging interpretation",
-                              tag: "Imaging",
-                            },
-                            {
-                              icon: Wind,
-                              name: "Sleep & Respiratory Medicine",
-                              desc: "Respiratory function & sleep studies",
-                              tag: "Specialty",
-                            },
-                            {
-                              icon: HeartPulse,
-                              name: "Pulmonary Medicine",
-                              desc: "Advanced pulmonary diagnostics & care",
-                              tag: "Advanced",
-                            },
-                          ].map((doc) => {
-                            const Icon = doc.icon;
-                            return (
-                              <div
-                                key={doc.name}
-                                className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02]"
-                              >
-                                <Icon
-                                  size={16}
-                                  className="text-[var(--teal)] flex-shrink-0"
-                                />
-                                <div className="flex-1">
-                                  <p className="text-xs font-medium">
-                                    {doc.name}
-                                  </p>
-                                  <p className="text-[10px] text-[var(--text-muted)]">
-                                    {doc.desc}
-                                  </p>
-                                </div>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--teal)]/10 text-[var(--teal)]">
-                                  {doc.tag}
-                                </span>
-                              </div>
-                            );
-                          })}
+                        {/* Item 3 */}
+                        <div className="space-y-1 pt-2 border-t border-white/[0.06]">
+                          <span className="text-xs text-slate-400 font-medium">
+                            Clinical Triage
+                          </span>
+                          <p className="text-[11px] text-slate-300 leading-snug">
+                            {result.triage_reason}
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Bottom disclaimer */}
-                  <div className="mt-8">
-                    <DisclaimerBanner />
+                  {/* Right 3 Cols: Clinora "Medication & Therapy" Clinical Protocol */}
+                  <div className="lg:col-span-3 clinora-card p-6 space-y-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white text-sm">
+                        Clinical Protocol
+                      </span>
+                      <Sparkles size={14} className="text-cyan-400" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Step 1 */}
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-0.5">
+                        <span className="text-xs font-bold text-slate-200 block">
+                          Oxygen &amp; Airway Support
+                        </span>
+                        <span className="text-[11px] text-slate-400 block leading-tight">
+                          Maintain SpO2 &gt; 94% with humidified nasal cannula if dyspnea observed.
+                        </span>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-0.5">
+                        <span className="text-xs font-bold text-slate-200 block">
+                          Targeted Antimicrobial Therapy
+                        </span>
+                        <span className="text-[11px] text-slate-400 block leading-tight">
+                          Confirm bacterial vs viral etiology via CRP/Procalcitonin before empiric antibiotics.
+                        </span>
+                      </div>
+
+                      {/* Step 3 */}
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-0.5">
+                        <span className="text-xs font-bold text-slate-200 block">
+                          Radiology Second-Look
+                        </span>
+                        <span className="text-[11px] text-slate-400 block leading-tight">
+                          Correlate Grad-CAM saliency hotspot with lateral chest view.
+                        </span>
+                      </div>
+
+                      {/* Step 4 */}
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-0.5">
+                        <span className="text-xs font-bold text-slate-200 block">
+                          Serial Follow-Up Scan
+                        </span>
+                        <span className="text-[11px] text-slate-400 block leading-tight">
+                          Re-evaluate in 48-72 hours to verify resolution of consolidation.
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Dribbble button */}
+                    <div className="pt-2">
+                      <button
+                        onClick={() => window.print()}
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-102"
+                      >
+                        <span>Export Full Report (PDF)</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <Footer />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
+
+      <Footer />
     </div>
   );
 }

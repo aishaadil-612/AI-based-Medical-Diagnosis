@@ -24,7 +24,6 @@ import {
   Loader2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 
@@ -111,13 +110,10 @@ export default function InsightsPage() {
   const stage1Data = formatData(history?.stage1);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[#070b14]">
       <Navbar />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 ml-16 overflow-y-auto">
-          <div className="px-6 py-6 max-w-[1400px] mx-auto">
-            <DisclaimerBanner />
+      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-8 py-6 space-y-6">
+        <DisclaimerBanner />
 
             <motion.div
               initial="hidden"
@@ -383,13 +379,11 @@ export default function InsightsPage() {
               )}
             </motion.div>
 
-            <div className="mt-8">
-              <DisclaimerBanner />
-            </div>
-          </div>
-          <Footer />
-        </main>
-      </div>
+        <div className="mt-8">
+          <DisclaimerBanner />
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 }

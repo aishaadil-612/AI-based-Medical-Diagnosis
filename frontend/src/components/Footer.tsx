@@ -8,9 +8,9 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <PneumoraLogo size={24} />
-            <span className="font-semibold gradient-text">Pneumora</span>
-            <span className="text-[var(--text-muted)] text-sm">
+            <PneumoraLogo size={28} />
+            <span className="font-bold text-white tracking-tight">Pneumora</span>
+            <span className="text-slate-400 text-sm hidden sm:inline">
               v1.0 — AI-Powered Pneumonia Screening
             </span>
           </div>
